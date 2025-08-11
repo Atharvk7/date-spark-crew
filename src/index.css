@@ -17,7 +17,7 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 222.2 47.4% 11.2%;
+    --primary: 336 84% 52%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 210 40% 96.1%;
@@ -35,6 +35,14 @@ All colors MUST be HSL.
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
+
+    /* Brand extensions */
+    --primary-2: 267 86% 58%;
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-2)));
+    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--background)));
+    --shadow-elevate: 0 10px 30px -10px hsl(var(--primary) / 0.30);
+    --shadow-glow: 0 12px 30px hsl(var(--primary) / 0.35);
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
     --radius: 0.5rem;
 
@@ -100,6 +108,35 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
   }
+}
+
+/* Component and utility tokens */
+@layer components {
+  .btn-hero {
+    background-image: var(--gradient-primary);
+    color: hsl(var(--primary-foreground));
+    box-shadow: var(--shadow-glow);
+    transition: var(--transition-smooth);
+  }
+  .btn-hero:hover {
+    filter: brightness(1.05);
+  }
+  .btn-hero:active {
+    transform: translateY(1px);
+  }
+
+  .card-surface {
+    @apply bg-card/80 border rounded-lg backdrop-blur-sm;
+    box-shadow: var(--shadow-elevate);
+  }
+}
+
+@layer utilities {
+  .bg-hero {
+    background: radial-gradient(1200px circle at var(--cursor-x, 50%) var(--cursor-y, 50%), hsl(var(--primary) / 0.12), transparent 40%), var(--gradient-subtle);
+  }
+  .shadow-elevate { box-shadow: var(--shadow-elevate); }
+  .shadow-glow { box-shadow: var(--shadow-glow); }
 }
