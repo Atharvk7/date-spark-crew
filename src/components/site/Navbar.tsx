@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const Navbar = () => {
   return (
@@ -15,7 +16,7 @@ const Navbar = () => {
         </div>
         <div className="flex items-center gap-3">
           <Button variant="ghost" asChild>
-            <a href="#cta">Sign in</a>
+            <Link to="/login">Sign in</Link>
           </Button>
           <Button variant="hero" asChild>
             <a href="#cta">Get started</a>
