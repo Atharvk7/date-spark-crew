@@ -1,7 +1,7 @@
-export type CustomerStatus = "New" | "Active" | "On Hold" | "Closed";
+export type ProfileStatus = "New" | "Active" | "On Hold" | "Closed";
 export type Ternary = "Yes" | "No" | "Maybe";
 
-export interface Customer {
+export interface Profile {
   id: string;
   firstName: string;
   lastName: string;
@@ -25,10 +25,10 @@ export interface Customer {
   wantKids: Ternary;
   openToRelocate: Ternary;
   openToPets: Ternary;
-  status: CustomerStatus;
+  status: ProfileStatus;
 }
 
-export const customers: Customer[] = [
+export const profiles: Profile[] = [
   {
     id: "1",
     firstName: "Aisha",
@@ -187,4 +187,4 @@ export const customers: Customer[] = [
   },
 ];
 
-export const getCustomerById = (id: string) => customers.find(c => c.id === id);
+export const getProfileById = (id: string) => profiles.find(p => p.id === id);

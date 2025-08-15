@@ -1,103 +1,283 @@
-import { Helmet } from "react-helmet-async";
-import { useParams, Link } from "react-router-dom";
-import { getCustomerById } from "@/data/customers";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../lib/authContext';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
+import { ArrowLeft, User, MapPin, Calendar, Phone, Mail, GraduationCap, Building, Heart, MessageSquare } from 'lucide-react';
+import profiles from '../data/profiles.json';
+import { Customer } from '../lib/aiUtils';
+import { getTopMatches, calculateCompatibilityScore, getMatchStatusTag } from '../lib/matchingLogic';
+import NotesSection from '../components/NotesSection';
+import MatchSuggestions from '../components/MatchSuggestions';
 
-const Row = ({ label, value }: { label: string; value?: string | number | string[] }) => (
-  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2">
-    <div className="text-muted-foreground">{label}</div>
-    <div className="sm:col-span-2 break-words">{Array.isArray(value) ? value.join(", ") : value ?? "-"}</div>
-  </div>
-);
+export default function CustomerDetail() {
+  const { customerId } = useParams<{ customerId: string }>();
+  const { currentUser } = useAuth();
+  const navigate = useNavigate();
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [matches, setMatches] = useState<Customer[]>([]);
 
-const CustomerDetail = () => {
-  const { id } = useParams();
-  const c = id ? getCustomerById(id) : undefined;
+  useEffect(() => {
+    if (customerId) {
+      const foundCustomer = profiles.find(p => p.id === customerId);
+      if (foundCustomer) {
+        // Type assertion to handle the interface mismatch
+        setCustomer(foundCustomer as Customer);
+        const topMatches = getTopMatches(foundCustomer as Customer, profiles as Customer[], 10);
+        setMatches(topMatches);
+      }
+    }
+  }, [customerId]);
 
-  if (!c) {
+  const getAge = (dateOfBirth: string) => {
+    const birthDate = new Date(dateOfBirth);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  if (!customer) {
     return (
-      <main className="container mx-auto px-4 py-12">
-        <Card>
-          <CardHeader>
-            <CardTitle>Customer Not Found</CardTitle>
-            <CardDescription>The requested customer profile does not exist.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link to="/dashboard" className="underline">Back to Dashboard</Link>
-          </CardContent>
-        </Card>
-      </main>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Customer Not Found</h2>
+          <p className="text-gray-600 mb-4">The customer you're looking for doesn't exist.</p>
+          <Button onClick={() => navigate('/dashboard')}>Back to Dashboard</Button>
+        </div>
+      </div>
     );
   }
 
-  const fullName = `${c.firstName} ${c.lastName}`;
-  const title = `${fullName} - Customer Profile | DateCrew`;
-  const description = `View the full matchmaking biodata for ${fullName} including demographics, education, career, and preferences.`;
-
-  const personJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Person",
-    name: fullName,
-    email: c.email,
-    telephone: c.phone,
-    gender: c.gender,
-    birthDate: c.dateOfBirth,
-    height: c.heightCm ? `${c.heightCm} cm` : undefined,
-    address: {
-      "@type": "PostalAddress",
-      addressLocality: c.city,
-      addressCountry: c.country,
-    },
-    jobTitle: c.designation,
-    worksFor: c.company ? { "@type": "Organization", name: c.company } : undefined,
-  };
-
   return (
-    <>
-      <Helmet>
-        <title>{title}</title>
-        <meta name="description" content={description} />
-        <link rel="canonical" href={window.location.href} />
-        <script type="application/ld+json">{JSON.stringify(personJsonLd)}</script>
-      </Helmet>
-      <main className="container mx-auto px-4 py-10">
-        <nav className="mb-4">
-          <Link to="/dashboard" className="underline">← Back to Dashboard</Link>
-        </nav>
-        <Card>
-          <CardHeader>
-            <CardTitle>{fullName}</CardTitle>
-            <CardDescription>Full biodata and matchmaking profile</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <section className="space-y-4">
-              <Row label="First Name" value={c.firstName} />
-              <Row label="Last Name" value={c.lastName} />
-              <Row label="Gender" value={c.gender} />
-              <Row label="Date of Birth" value={c.dateOfBirth} />
-              <Row label="Country, City" value={`${c.country}, ${c.city}`} />
-              <Row label="Height" value={c.heightCm ? `${c.heightCm} cm` : undefined} />
-              <Row label="Email" value={c.email} />
-              <Row label="Phone Number" value={c.phone} />
-              <Row label="Undergraduate College" value={c.college} />
-              <Row label="Degree" value={c.degree} />
-              <Row label="Income" value={c.income} />
-              <Row label="Current Company" value={c.company} />
-              <Row label="Designation" value={c.designation} />
-              <Row label="Marital Status" value={c.maritalStatus} />
-              <Row label="Languages Known" value={c.languages} />
-              <Row label="Siblings" value={c.siblings} />
-              <Row label="Caste" value={c.caste} />
-              <Row label="Religion" value={c.religion} />
-              <Row label="Want Kids" value={c.wantKids} />
-              <Row label="Open to Relocate" value={c.openToRelocate} />
-              <Row label="Open to Pets" value={c.openToPets} />
-            </section>
-          </CardContent>
-        </Card>
-      </main>
-    </>
-  );
-};
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-4">
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/dashboard')}
+                className="flex items-center space-x-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to Dashboard</span>
+              </Button>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {customer.firstName} {customer.lastName}
+            </h1>
+            <div className="w-32"></div>
+          </div>
+        </div>
+      </header>
 
-export default CustomerDetail;
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Customer Details */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Basic Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <User className="w-5 h-5" />
+                  <span>Basic Information</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Full Name</label>
+                    <p className="text-gray-900">{customer.firstName} {customer.lastName}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Gender</label>
+                    <p className="text-gray-900">{customer.gender}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Date of Birth</label>
+                    <p className="text-gray-900 flex items-center">
+                      <Calendar className="w-4 h-4 mr-2" />
+                      {new Date(customer.dateOfBirth).toLocaleDateString()} ({getAge(customer.dateOfBirth)} years)
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Height</label>
+                    <p className="text-gray-900">{customer.height} cm</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Marital Status</label>
+                    <Badge variant="secondary">{customer.maritalStatus}</Badge>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Religion</label>
+                    <p className="text-gray-900">{customer.religion}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Contact Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Mail className="w-5 h-5" />
+                  <span>Contact Information</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Email</label>
+                    <p className="text-gray-900 flex items-center">
+                      <Mail className="w-4 h-4 mr-2" />
+                      {customer.email}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Phone Number</label>
+                    <p className="text-gray-900 flex items-center">
+                      <Phone className="w-4 h-4 mr-2" />
+                      {customer.phoneNumber}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Education & Career */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <GraduationCap className="w-5 h-5" />
+                  <span>Education & Career</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">College</label>
+                    <p className="text-gray-900">{customer.undergraduateCollege}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Degree</label>
+                    <p className="text-gray-900">{customer.degree}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Current Company</label>
+                    <p className="text-gray-900 flex items-center">
+                      <Building className="w-4 h-4 mr-2" />
+                      {customer.currentCompany}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Designation</label>
+                    <p className="text-gray-900">{customer.designation}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Annual Income</label>
+                    <p className="text-gray-900">₹{customer.income.toLocaleString()}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Personal Preferences */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Heart className="w-5 h-5" />
+                  <span>Personal Preferences</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Want Kids</label>
+                    <Badge variant="outline">{customer.wantKids}</Badge>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Open to Relocate</label>
+                    <Badge variant="outline">{customer.openToRelocate}</Badge>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Open to Pets</label>
+                    <Badge variant="outline">{customer.openToPets}</Badge>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Languages Known</label>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {customer.languagesKnown.map((language, index) => (
+                      <Badge key={index} variant="secondary">{language}</Badge>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Match Suggestions with Send Match functionality */}
+            <MatchSuggestions customer={customer} matches={matches} />
+
+            {/* Meeting Notes Section */}
+            <NotesSection customerId={customer.id} matchmakerId={currentUser?.uid || 'matchmaker1'} />
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Quick Stats */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Stats</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Age</span>
+                  <span className="font-medium">{getAge(customer.dateOfBirth)} years</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Height</span>
+                  <span className="font-medium">{customer.height} cm</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Income</span>
+                  <span className="font-medium">₹{(customer.income / 100000).toFixed(1)}L</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Languages</span>
+                  <span className="font-medium">{customer.languagesKnown.length}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Schedule Meeting
+                </Button>
+                <Button variant="outline" className="w-full">
+                  <Mail className="w-4 h-4 mr-2" />
+                  Send Email
+                </Button>
+                <Button variant="outline" className="w-full">
+                  <Phone className="w-4 h-4 mr-2" />
+                  Call Customer
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
