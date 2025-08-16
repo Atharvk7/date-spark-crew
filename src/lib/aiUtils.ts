@@ -61,6 +61,8 @@ export interface MeetingNote {
   topicsDiscussed: string[];
   customerFeedback?: string;
   matchmakerObservations: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 /**

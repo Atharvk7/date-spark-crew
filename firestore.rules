@@ -1,0 +1,14 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Although profiles are local now, this rule is good practice
+    match /profiles/{userId} {
+      allow read: if request.auth != null;
+
+      // Allow authenticated users to manage notes for any profile
+      match /notes/{noteId} {
+        allow read, write: if request.auth != null;
+      }
+    }
+  }
+}
