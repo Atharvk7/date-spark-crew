@@ -80,11 +80,33 @@ export default function MatchSuggestions({ customer, matches }: MatchSuggestions
     return age;
   };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 90) return 'bg-green-100 text-green-800';
-    if (score >= 80) return 'bg-blue-100 text-blue-800';
-    if (score >= 70) return 'bg-yellow-100 text-yellow-800';
-    return 'bg-gray-100 text-gray-800';
+  const getScoreStyling = (score: number) => {
+    if (score >= 90) {
+      return {
+        card: 'bg-green-50 border-green-300 hover:shadow-md hover:border-green-400',
+        badge: 'bg-green-100 text-green-800 border border-green-200',
+        button: 'bg-green-600 hover:bg-green-700',
+      };
+    }
+    if (score >= 80) {
+      return {
+        card: 'bg-blue-50 border-blue-300 hover:shadow-md hover:border-blue-400',
+        badge: 'bg-blue-100 text-blue-800 border border-blue-200',
+        button: 'bg-blue-600 hover:bg-blue-700',
+      };
+    }
+    if (score >= 70) {
+      return {
+        card: 'bg-yellow-50 border-yellow-300 hover:shadow-md hover:border-yellow-400',
+        badge: 'bg-yellow-100 text-yellow-800 border border-yellow-200',
+        button: 'bg-yellow-500 hover:bg-yellow-600',
+      };
+    }
+    return {
+      card: 'bg-white border-gray-200 hover:shadow-md hover:border-gray-300',
+      badge: 'bg-gray-100 text-gray-800 border border-gray-200',
+      button: 'bg-gray-600 hover:bg-gray-700',
+    };
   };
 
   const handleSendMatch = async (match: Customer) => {
@@ -118,11 +140,13 @@ export default function MatchSuggestions({ customer, matches }: MatchSuggestions
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <Heart className="w-5 h-5 text-pink-600" />
-          <span>Match Suggestions</span>
+    <Card className="bg-white border-gray-200 shadow-lg">
+      <CardHeader className="bg-gray-50 rounded-t-lg border-b">
+        <CardTitle className="flex items-center space-x-3">
+          <div className="p-2 bg-blue-100 rounded-lg">
+            <Heart className="w-5 h-5 text-blue-600" />
+          </div>
+          <span className="text-xl font-bold text-gray-800">AI Matchmaker's Suggestions</span>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -134,15 +158,17 @@ export default function MatchSuggestions({ customer, matches }: MatchSuggestions
           </div>
         ) : (
           <div className="space-y-4">
-            {matchSuggestions.map((suggestion) => (
-              <div key={suggestion.match.id} className="border rounded-lg p-4 space-y-3 hover:shadow-md transition-shadow">
+            {matchSuggestions.map((suggestion) => {
+              const scoreStyles = getScoreStyling(suggestion.score);
+              return (
+              <div key={suggestion.match.id} className={`border rounded-lg p-4 space-y-3 transition-all duration-300 ${scoreStyles.card}`}>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
-                      <h4 className="font-semibold text-lg">
+                      <h4 className="font-semibold text-lg text-gray-800">
                         {suggestion.match.firstName} {suggestion.match.lastName}
                       </h4>
-                      <Badge className={getScoreColor(suggestion.score)}>
+                      <Badge className={scoreStyles.badge}>
                         {suggestion.score}% match
                       </Badge>
                     </div>
@@ -190,7 +216,7 @@ export default function MatchSuggestions({ customer, matches }: MatchSuggestions
                   </Button>
                   <Button
                     size="sm"
-                    className="bg-pink-600 hover:bg-pink-700"
+                    className={scoreStyles.button}
                     onClick={() => handleSendMatch(suggestion.match)}
                     disabled={sendingMatch === suggestion.match.id}
                   >
@@ -199,7 +225,8 @@ export default function MatchSuggestions({ customer, matches }: MatchSuggestions
                   </Button>
                 </div>
               </div>
-            ))}
+              )
+            })}
           </div>
         )}
         

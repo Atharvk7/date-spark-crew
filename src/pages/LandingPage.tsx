@@ -84,7 +84,7 @@ export default function LandingPage() {
               <Button variant="ghost" className="text-gray-600 hover:text-pink-600">
                 Features
               </Button>
-              <Button 
+              <Button
                 onClick={handleSignIn}
                 className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white px-6"
               >
@@ -115,18 +115,18 @@ export default function LandingPage() {
                   Join thousands of successful couples who found their soulmate through our AI-powered matching and expert matchmaking services.
                 </p>
               </div>
-              
+
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button 
+                <Button
                   onClick={handleSignIn}
-                  size="lg" 
+                  size="lg"
                   className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white px-8 py-4 text-lg"
                 >
                   Start Your Journey
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="lg"
                   className="border-pink-200 text-pink-600 hover:bg-pink-50 px-8 py-4 text-lg"
                 >
@@ -146,9 +146,9 @@ export default function LandingPage() {
 
             <div className="relative">
               <div className="relative z-10">
-                <img 
-                  src="/src/assets/hero-dating.jpg" 
-                  alt="Happy Couple" 
+                <img
+                  src="https://res.cloudinary.com/dqxq9urjj/image/upload/v1755306901/hero-dating_pb5lmy.jpg"
+                  alt="Happy Couple"
                   className="rounded-2xl shadow-2xl w-full h-auto"
                 />
               </div>
@@ -268,16 +268,16 @@ export default function LandingPage() {
             Join thousands of successful couples who found love through DateSpark. Your soulmate is waiting!
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
+            <Button
               onClick={handleSignIn}
-              size="lg" 
+              size="lg"
               className="bg-white text-pink-600 hover:bg-pink-50 px-8 py-4 text-lg font-semibold"
             >
               Start Your Journey Today
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="lg"
               className="border-white text-white hover:bg-white hover:text-pink-600 px-8 py-4 text-lg"
             >
