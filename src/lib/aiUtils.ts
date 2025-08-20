@@ -1,18 +1,4 @@
-import OpenAI from 'openai';
-
-// Check if OpenAI API key is available
-const hasOpenAIKey = import.meta.env.VITE_OPENAI_API_KEY;
-
-let openai: OpenAI | null = null;
-
-if (hasOpenAIKey) {
-  openai = new OpenAI({
-    apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-    dangerouslyAllowBrowser: true,
-  });
-} else {
-  console.warn('OpenAI API key not found. Using mock AI responses.');
-}
+import { model, generationConfig, safetySettings } from './gemini';
 
 export interface Customer {
   id: string;
@@ -66,14 +52,15 @@ export interface MeetingNote {
 }
 
 /**
- * Generate a brief explanation for why two customers are a good match
+ * Generate a brief explanation for why two customers are a good match using Gemini
  */
 export async function generateMatchExplanation(
   customer: Customer,
   match: Customer
 ): Promise<string> {
-  if (!openai) {
-    // Mock response when OpenAI is not available
+  const hasGeminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  
+  if (!hasGeminiKey) {
     return `Great compatibility! ${customer.firstName} and ${match.firstName} share similar values, educational backgrounds, and lifestyle preferences. Their complementary qualities make them an excellent potential match.`;
   }
 
@@ -91,14 +78,13 @@ Provide a 2-3 sentence explanation focusing on:
 
 Keep it friendly, professional, and insightful.`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 200,
-      temperature: 0.7,
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { ...generationConfig, maxOutputTokens: 200 },
+      safetySettings,
     });
 
-    return response.choices[0]?.message?.content || 'Great compatibility based on shared values and lifestyle preferences.';
+    return result.response.text() || 'Great compatibility based on shared values and lifestyle preferences.';
   } catch (error) {
     console.error('Error generating match explanation:', error);
     return 'Great compatibility based on shared values and lifestyle preferences.';
@@ -106,14 +92,15 @@ Keep it friendly, professional, and insightful.`;
 }
 
 /**
- * Generate a short, friendly introduction email for a potential match
+ * Generate a short, friendly introduction email for a potential match using Gemini
  */
 export async function generateIntroEmail(
   sender: Customer,
   receiver: Customer
 ): Promise<string> {
-  if (!openai) {
-    // Mock response when OpenAI is not available
+  const hasGeminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  
+  if (!hasGeminiKey) {
     return `Dear ${receiver.firstName},
 
 I believe you and ${sender.firstName} would be an excellent match! You both share similar values, professional backgrounds, and life goals. 
@@ -141,14 +128,13 @@ Make it personal by highlighting:
 
 Keep it warm, professional, and under 150 words.`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 250,
-      temperature: 0.8,
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { ...generationConfig, maxOutputTokens: 250 },
+      safetySettings,
     });
 
-    return response.choices[0]?.message?.content || `Dear ${receiver.firstName},\n\nI believe you and ${sender.firstName} would be an excellent match! You both share similar values and professional backgrounds. I'd love to introduce you - would you be interested in connecting?\n\nBest regards,\nTDC Matchmakers`;
+    return result.response.text() || `Dear ${receiver.firstName},\n\nI believe you and ${sender.firstName} would be an excellent match! You both share similar values and professional backgrounds. I'd love to introduce you - would you be interested in connecting?\n\nBest regards,\nTDC Matchmakers`;
   } catch (error) {
     console.error('Error generating intro email:', error);
     return `Dear ${receiver.firstName},\n\nI believe you and ${sender.firstName} would be an excellent match! You both share similar values and professional backgrounds. I'd love to introduce you - would you be interested in connecting?\n\nBest regards,\nTDC Matchmakers`;
@@ -156,78 +142,111 @@ Keep it warm, professional, and under 150 words.`;
 }
 
 /**
- * Generate AI-powered match suggestions with detailed reasoning
+ * Generate AI-powered match suggestions with detailed reasoning using Gemini
  */
-export async function generateMatchSuggestions(
+export async function generateGeminiMatchSuggestions(
   customer: Customer,
   potentialMatches: Customer[]
 ): Promise<Array<{ match: Customer; score: number; reasoning: string; compatibilityFactors: string[] }>> {
-  if (!openai) {
-    // Mock response when OpenAI is not available
-    return potentialMatches.slice(0, 10).map((match, index) => ({
+  const hasGeminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  
+  if (!hasGeminiKey) {
+    console.warn('Gemini API key not found. Using fallback logic.');
+    return potentialMatches.slice(0, 8).map((match, index) => ({
       match,
-      score: 85 - (index * 5),
+      score: 85 - (index * 3),
       reasoning: `Good compatibility based on shared values and complementary qualities.`,
       compatibilityFactors: ['Similar education level', 'Compatible age range', 'Shared lifestyle preferences']
     }));
   }
 
   try {
-    const prompt = `Analyze the compatibility between this customer and potential matches. For each match, provide:
-1. A compatibility score (0-100)
-2. Brief reasoning for the score
-3. Top 3 compatibility factors
+    const prompt = `As an expert matchmaker, analyze the compatibility between this customer and potential matches. Consider cultural values, lifestyle compatibility, career alignment, family goals, and personality traits.
 
-Customer: ${customer.firstName} ${customer.lastName} (${customer.gender}, ${customer.city}, ${customer.designation} at ${customer.currentCompany}, ${customer.religion}, wants kids: ${customer.wantKids})
+Customer Profile:
+Name: ${customer.firstName} ${customer.lastName}
+Gender: ${customer.gender}
+Age: ${new Date().getFullYear() - new Date(customer.dateOfBirth).getFullYear()}
+Location: ${customer.city}
+Career: ${customer.designation} at ${customer.currentCompany}
+Education: ${customer.degree}
+Religion: ${customer.religion}
+Family Goals: ${customer.wantKids}
+Relocation: ${customer.openToRelocate}
+Income: ${customer.income}
+Languages: ${customer.languagesKnown?.join(', ') || 'Not specified'}
+Hobbies: ${customer.hobbies?.join(', ') || 'Not specified'}
 
 Potential Matches:
-${potentialMatches.slice(0, 10).map((match, index) => 
-  `${index + 1}. ${match.firstName} ${match.lastName} (${match.gender}, ${match.city}, ${match.designation} at ${match.currentCompany}, ${match.religion}, wants kids: ${match.wantKids})`
+${potentialMatches.slice(0, 8).map((match, index) => 
+  `${index + 1}. ${match.firstName} ${match.lastName} (${match.gender}, Age: ${new Date().getFullYear() - new Date(match.dateOfBirth).getFullYear()}, ${match.city}, ${match.designation} at ${match.currentCompany}, ${match.religion}, Kids: ${match.wantKids}, Income: ${match.income})`
 ).join('\n')}
 
-Provide analysis in JSON format:
+For each match, provide:
+1. Compatibility score (70-100, be realistic)
+2. 2-3 sentence reasoning focusing on strongest compatibility factors
+3. Top 3 specific compatibility factors
+
+Return ONLY valid JSON in this exact format:
 {
   "matches": [
     {
       "matchIndex": 1,
-      "score": 85,
-      "reasoning": "Strong compatibility due to...",
-      "compatibilityFactors": ["Factor 1", "Factor 2", "Factor 3"]
+      "score": 87,
+      "reasoning": "Excellent compatibility in core values and life goals. Both share similar educational backgrounds and career ambitions, with complementary personalities that would create a balanced partnership.",
+      "compatibilityFactors": ["Shared religious values", "Compatible career levels", "Similar family goals"]
     }
   ]
 }`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 800,
-      temperature: 0.7,
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig,
+      safetySettings,
     });
 
+    const response = result.response;
+    const text = response.text();
+    
     try {
-      const result = JSON.parse(response.choices[0]?.message?.content || '{}');
-      return result.matches?.map((item: any) => ({
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('No JSON found in response');
+      }
+      
+      const parsedResult = JSON.parse(jsonMatch[0]);
+      return parsedResult.matches?.map((item: any) => ({
         match: potentialMatches[item.matchIndex - 1],
-        score: item.score,
-        reasoning: item.reasoning,
-        compatibilityFactors: item.compatibilityFactors
-      })) || [];
+        score: Math.min(100, Math.max(70, item.score)),
+        reasoning: item.reasoning || 'Good compatibility based on shared values.',
+        compatibilityFactors: item.compatibilityFactors || ['Compatible background', 'Shared interests', 'Similar values']
+      })).filter((item: any) => item.match) || [];
     } catch (parseError) {
-      console.error('Error parsing AI response:', parseError);
-      return potentialMatches.slice(0, 10).map((match, index) => ({
+      console.error('Error parsing Gemini response:', parseError);
+      return potentialMatches.slice(0, 8).map((match, index) => ({
         match,
-        score: 85 - (index * 5),
-        reasoning: `Good compatibility based on shared values.`,
+        score: 85 - (index * 3),
+        reasoning: `AI analysis suggests good compatibility based on shared values and lifestyle preferences.`,
         compatibilityFactors: ['Similar background', 'Compatible preferences', 'Good age match']
       }));
     }
   } catch (error) {
-    console.error('Error generating match suggestions:', error);
-    return potentialMatches.slice(0, 10).map((match, index) => ({
+    console.error('Error generating Gemini match suggestions:', error);
+    return potentialMatches.slice(0, 8).map((match, index) => ({
       match,
-      score: 85 - (index * 5),
-      reasoning: `Good compatibility based on shared values.`,
+      score: 85 - (index * 3),
+      reasoning: `Good compatibility based on shared values and complementary qualities.`,
       compatibilityFactors: ['Similar background', 'Compatible preferences', 'Good age match']
     }));
   }
+}
+
+/**
+ * Generate AI-powered match suggestions with detailed reasoning (alias for Gemini function)
+ */
+export async function generateMatchSuggestions(
+  customer: Customer,
+  potentialMatches: Customer[]
+): Promise<Array<{ match: Customer; score: number; reasoning: string; compatibilityFactors: string[] }>> {
+  return generateGeminiMatchSuggestions(customer, potentialMatches);
 }

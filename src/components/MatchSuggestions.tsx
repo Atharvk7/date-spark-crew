@@ -3,8 +3,8 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
-import { Heart, Send, MapPin, Building, Calendar, User, Mail } from 'lucide-react';
-import { Customer, generateIntroEmail } from '../lib/aiUtils';
+import { Heart, Send, MapPin, Building, Calendar, User, Mail, Sparkles, Loader2 } from 'lucide-react';
+import { Customer, generateIntroEmail, generateGeminiMatchSuggestions } from '../lib/aiUtils';
 import { useToast } from '../hooks/use-toast';
 import profiles from '../data/profiles.json';
 
@@ -27,46 +27,60 @@ export default function MatchSuggestions({ customer, matches }: MatchSuggestions
   const [emailPreview, setEmailPreview] = useState<string>('');
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<Customer | null>(null);
+  const [isLoadingAI, setIsLoadingAI] = useState(false);
 
   useEffect(() => {
-    // Generate enhanced match suggestions with compatibility scores and reasoning
-    const suggestions = matches.slice(0, 8).map((match, index) => {
-      const baseScore = 85 - (index * 3);
-      const ageCompatibility = Math.abs(getAge(customer.dateOfBirth) - getAge(match.dateOfBirth)) <= 5 ? 5 : 0;
-      const locationBonus = customer.city === match.city ? 8 : 0;
-      const religionBonus = customer.religion === match.religion ? 7 : 0;
-      const educationBonus = customer.degree && match.degree ? 5 : 0;
-      
-      const finalScore = Math.min(100, baseScore + ageCompatibility + locationBonus + religionBonus + educationBonus);
-      
-      const factors = [];
-      if (ageCompatibility > 0) factors.push('Compatible age range');
-      if (locationBonus > 0) factors.push('Same city');
-      if (religionBonus > 0) factors.push('Shared religious values');
-      if (educationBonus > 0) factors.push('Similar education level');
-      if (customer.wantKids === match.wantKids) factors.push('Aligned family planning');
-      if (customer.openToRelocate === 'Yes' || match.openToRelocate === 'Yes') factors.push('Flexible location');
+    const generateAISuggestions = async () => {
+      setIsLoadingAI(true);
+      try {
+        // Use Gemini AI to generate intelligent match suggestions
+        const aiSuggestions = await generateGeminiMatchSuggestions(customer, matches);
+        setMatchSuggestions(aiSuggestions.sort((a, b) => b.score - a.score));
+      } catch (error) {
+        console.error('Error generating AI suggestions:', error);
+        // Fallback to rule-based suggestions if AI fails
+        const fallbackSuggestions = matches.slice(0, 8).map((match, index) => {
+          const baseScore = 85 - (index * 3);
+          const ageCompatibility = Math.abs(getAge(customer.dateOfBirth) - getAge(match.dateOfBirth)) <= 5 ? 5 : 0;
+          const locationBonus = customer.city === match.city ? 8 : 0;
+          const religionBonus = customer.religion === match.religion ? 7 : 0;
+          const educationBonus = customer.degree && match.degree ? 5 : 0;
+          
+          const finalScore = Math.min(100, baseScore + ageCompatibility + locationBonus + religionBonus + educationBonus);
+          
+          const factors = [];
+          if (ageCompatibility > 0) factors.push('Compatible age range');
+          if (locationBonus > 0) factors.push('Same city');
+          if (religionBonus > 0) factors.push('Shared religious values');
+          if (educationBonus > 0) factors.push('Similar education level');
+          if (customer.wantKids === match.wantKids) factors.push('Aligned family planning');
+          if (customer.openToRelocate === 'Yes' || match.openToRelocate === 'Yes') factors.push('Flexible location');
 
-      let reasoning = '';
-      if (finalScore >= 90) {
-        reasoning = `Excellent compatibility! ${customer.firstName} and ${match.firstName} share strong fundamental values and lifestyle preferences.`;
-      } else if (finalScore >= 80) {
-        reasoning = `Great potential match with good compatibility across key areas and complementary qualities.`;
-      } else if (finalScore >= 70) {
-        reasoning = `Solid compatibility with some shared interests and values that could develop into a strong connection.`;
-      } else {
-        reasoning = `Moderate compatibility with potential for growth through shared experiences and understanding.`;
+          let reasoning = '';
+          if (finalScore >= 90) {
+            reasoning = `Excellent compatibility! ${customer.firstName} and ${match.firstName} share strong fundamental values and lifestyle preferences.`;
+          } else if (finalScore >= 80) {
+            reasoning = `Great potential match with good compatibility across key areas and complementary qualities.`;
+          } else if (finalScore >= 70) {
+            reasoning = `Solid compatibility with some shared interests and values that could develop into a strong connection.`;
+          } else {
+            reasoning = `Moderate compatibility with potential for growth through shared experiences and understanding.`;
+          }
+
+          return {
+            match,
+            score: finalScore,
+            reasoning,
+            compatibilityFactors: factors.slice(0, 3)
+          };
+        });
+        setMatchSuggestions(fallbackSuggestions.sort((a, b) => b.score - a.score));
+      } finally {
+        setIsLoadingAI(false);
       }
+    };
 
-      return {
-        match,
-        score: finalScore,
-        reasoning,
-        compatibilityFactors: factors.slice(0, 3)
-      };
-    });
-
-    setMatchSuggestions(suggestions.sort((a, b) => b.score - a.score));
+    generateAISuggestions();
   }, [customer, matches]);
 
   const getAge = (dateOfBirth: string) => {
@@ -144,13 +158,29 @@ export default function MatchSuggestions({ customer, matches }: MatchSuggestions
       <CardHeader className="bg-gray-50 rounded-t-lg border-b">
         <CardTitle className="flex items-center space-x-3">
           <div className="p-2 bg-blue-100 rounded-lg">
-            <Heart className="w-5 h-5 text-blue-600" />
+            <Sparkles className="w-5 h-5 text-blue-600" />
           </div>
           <span className="text-xl font-bold text-gray-800">AI Matchmaker's Suggestions</span>
+          {isLoadingAI && (
+            <div className="flex items-center space-x-2 text-sm text-blue-600">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Analyzing compatibility...</span>
+            </div>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {matchSuggestions.length === 0 ? (
+        {isLoadingAI ? (
+          <div className="text-center py-8">
+            <div className="flex flex-col items-center space-y-4">
+              <Loader2 className="w-12 h-12 animate-spin text-blue-500" />
+              <div>
+                <p className="text-gray-700 font-medium">AI is analyzing compatibility...</p>
+                <p className="text-sm text-gray-500 mt-1">Using advanced algorithms to find the best matches</p>
+              </div>
+            </div>
+          </div>
+        ) : matchSuggestions.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <Heart className="w-12 h-12 mx-auto mb-4 text-gray-300" />
             <p>No match suggestions available</p>
